@@ -42,7 +42,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dpill .dn{font-size:13px;font-weight:600;color:var(--text);margin-top:2px}
 .dpill.on{border-color:var(--accent);background:var(--accent-bg)}
 .dpill.on .dl,.dpill.on .dn{color:var(--accent-text)}
-.dpill.done .dl{color:var(--accent)}
+.dpill.locked{opacity:.45}
+.dlock{font-size:9px;margin-top:3px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.dpill.on .dlock{color:var(--accent)}
+.lockmsg{margin:10px 14px 0;padding:9px 12px;border-radius:var(--r);background:var(--warn-bg);border:1px solid rgba(181,97,10,.25);font-size:12.5px;color:var(--warn-text)}
+.savedbanner{margin:12px 14px 0;padding:12px 14px;border-radius:var(--r);background:var(--accent-bg);border:1px solid var(--accent);font-size:14px;font-weight:600;color:var(--accent-text)}
+.sbsub{font-size:12px;font-weight:400;margin-top:3px;color:var(--accent-text);opacity:.85}
+.nextbadge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:100px;background:var(--accent);color:#fff;letter-spacing:.04em}
 .chip-row{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 2px}
 .chip{font-size:12px;padding:4px 10px;border-radius:100px;background:var(--surface-alt);border:1px solid var(--border);color:var(--muted)}
 .exlist{padding:8px 14px 0;display:flex;flex-direction:column;gap:8px}
@@ -216,11 +222,7 @@ table.st td{border-bottom:1px solid var(--border)}
 
 <div class="shell">
   <div id="t-today" class="tab on">
-    <div class="day-row">
-      <button class="dpill on" id="pill-0" onclick="selDay(0)"><div class="dl">Day 1</div><div class="dn">Upper A</div></button>
-      <button class="dpill" id="pill-1" onclick="selDay(1)"><div class="dl">Day 2</div><div class="dn">Lower</div></button>
-      <button class="dpill" id="pill-2" onclick="selDay(2)"><div class="dl">Day 3</div><div class="dn">Upper B</div></button>
-    </div>
+    <div class="day-row" id="day-row"></div>
     <div id="session"></div>
   </div>
 
@@ -395,7 +397,10 @@ var GLOSSARY = [
 
 // ── STATE ─────────────────────────────────────────────
 var curDay = 0;
-var sd = {}, dn = {}, oe = {}, fin = {}, pd = {}, pt = {};
+var nextDay = 0;        // the only day you're allowed to train — rotates on completion
+var justSaved = null;   // banner shown right after a workout is saved
+var dayMsg = null;      // "that day is locked" notice
+var sd = {}, dn = {}, oe = {}, pd = {}, pt = {};
 var hist = [];
 var lastLog = {}; // {exerciseName:{date:'Mon 1 Sep', sets:[{kg:'40',reps:'12'}]}}
 var gcat = 'All', gq = '', gopenIdx = {};
@@ -428,11 +433,27 @@ function showTab(name) {
   if (name==='guide') renderGuide();
 }
 
-// ── DAY SELECT ────────────────────────────────────────
+// ── DAY SELECT (locked to the rotation) ───────────────
+function renderPills() {
+  var h='';
+  DAYS.forEach(function(d,i){
+    var on = (i===nextDay);
+    h += '<button class="dpill'+(on?' on':' locked')+'" onclick="selDay('+i+')">';
+    h += '<div class="dl">Day '+(i+1)+'</div><div class="dn">'+d.name+'</div>';
+    h += '<div class="dlock">'+(on?'▶ Today':'🔒 Locked')+'</div></button>';
+  });
+  document.getElementById('day-row').innerHTML=h;
+}
+
 function selDay(di) {
-  curDay = di;
-  for (var i=0;i<3;i++) document.getElementById('pill-'+i).classList.toggle('on', i===di);
-  renderSession();
+  if (di !== nextDay) {
+    dayMsg = DAYS[di].name+' is locked — '+DAYS[nextDay].name+' is next in your rotation. '+
+             'Finish it and '+DAYS[di].name+' unlocks in turn.';
+    renderSession();
+    return;
+  }
+  curDay = di; dayMsg = null;
+  renderPills(); renderSession();
 }
 
 // ── SESSION ───────────────────────────────────────────
@@ -447,7 +468,13 @@ function renderSession() {
     });
   });
   var pct = total ? Math.round(done/total*100) : 0;
-  var html = '<div class="chip-row"><span class="chip">⏱ '+d.dur+'</span><span class="chip">'+d.focus+'</span></div>';
+  var html = '';
+  if (justSaved) {
+    html += '<div class="savedbanner">'+justSaved.name+' saved ✓ · '+justSaved.sets+' sets · '+justSaved.vol+' kg';
+    html += '<div class="sbsub">Next up: '+justSaved.next+' — it\'s loaded and ready below.</div></div>';
+  }
+  if (dayMsg) html += '<div class="lockmsg">🔒 '+dayMsg+'</div>';
+  html += '<div class="chip-row"><span class="chip">⏱ '+d.dur+'</span><span class="chip">'+d.focus+'</span></div>';
   html += '<div class="exlist">';
   d.ex.forEach(function(ex,ei) { html += ex.plank ? plankCard(di,ei,ex) : exCard(di,ei,ex); });
   html += '</div>';
@@ -458,11 +485,9 @@ function renderSession() {
   html += '<div class="stattile"><div class="statval">'+done+'</div><div class="statlbl">Sets done</div></div>';
   html += '<div class="stattile"><div class="statval">'+d.ex.length+'</div><div class="statlbl">Exercises</div></div>';
   html += '</div>';
-  if (!fin[di]) {
-    html += '<button class="finbtn" onclick="finSess()">Workout complete ✓</button>';
-    html += '<div class="finhint">'+(done===total&&total>0 ? 'All sets logged — save it to Progress.' : 'Saves this workout to your Progress tab.')+'</div>';
-  }
-  if (fin[di]) html += '<div class="finsaved">Saved to Progress ✓</div><button class="resetbtn" onclick="showTab(\'prog\')">📈 View progress</button><button class="resetbtn" onclick="resetDay('+di+')">↺ Reset this day</button>';
+  html += '<button class="finbtn" onclick="finSess()">Workout complete ✓</button>';
+  html += '<div class="finhint">Saves to Progress, clears this sheet and unlocks '+DAYS[(di+1)%DAYS.length].name+'.</div>';
+  html += '<button class="resetbtn" onclick="clearDay()">↺ Clear what I\'ve logged</button>';
   html += '</div><div style="height:1rem"></div>';
   document.getElementById('session').innerHTML = html;
 }
@@ -554,8 +579,8 @@ function plankCard(di,ei,ex) {
 
 function togEx(di,ei) { oe[di][ei]=!oe[di][ei]; renderSession(); }
 function sv(di,ei,si,f,v) { sd[di][ei][si][f]=v; }
-function togDone(di,ei,si) { dn[di][ei][si]=!dn[di][ei][si]; oe[di][ei]=true; renderSession(); }
-function addSet(di,ei) { sd[di][ei].push({kg:'',reps:''}); dn[di][ei].push(false); oe[di][ei]=true; renderSession(); }
+function togDone(di,ei,si) { justSaved=null; dayMsg=null; dn[di][ei][si]=!dn[di][ei][si]; oe[di][ei]=true; renderSession(); }
+function addSet(di,ei) { justSaved=null; sd[di][ei].push({kg:'',reps:''}); dn[di][ei].push(false); oe[di][ei]=true; renderSession(); }
 
 function togPlank(di) {
   var p=pt[di];
@@ -610,24 +635,29 @@ function finSess() {
     lastLog[name] = {date:dateStr, sets:logged[name]};
   });
   hist.unshift({name:d.name,focus:d.focus,sets:sets,vol:Math.round(vol),date:dateStr});
-  fin[di]=true;
-  document.getElementById('pill-'+di).classList.add('done');
-  renderSession(); save();
+
+  // Reset the sheet and rotate to the next day in the split
+  initDay(di);
+  nextDay = (di+1)%DAYS.length;
+  curDay = nextDay;
+  justSaved = {name:d.name, next:DAYS[nextDay].name, sets:sets, vol:Math.round(vol)};
+  dayMsg = null;
+  renderPills(); renderSession(); save();
 }
 
-function resetDay(di) {
-  if(!confirm('Reset this session? Your log entry stays in history.')) return;
-  initDay(di);
-  fin[di]=false;
-  document.getElementById('pill-'+di).classList.remove('done');
+function clearDay() {
+  if(!confirm('Clear the weights and reps logged for '+DAYS[curDay].name+'? Your rotation and history stay as they are.')) return;
+  initDay(curDay);
+  justSaved=null; dayMsg=null;
   renderSession();
 }
 
 // ── PLAN ──────────────────────────────────────────────
 function renderPlan() {
   var h='';
-  DAYS.forEach(function(d){
-    h+='<div class="plancard"><div class="plancardhead"><div><div class="plancardname">'+d.name+'</div><div class="plancardmeta">'+d.focus+' · '+d.dur+'</div></div></div>';
+  DAYS.forEach(function(d,di){
+    h+='<div class="plancard"><div class="plancardhead"><div><div class="plancardname">'+d.name+'</div><div class="plancardmeta">'+d.focus+' · '+d.dur+'</div></div>';
+    h+=(di===nextDay?'<span class="nextbadge">NEXT UP</span>':'<span style="font-size:12px;color:var(--faint)">🔒</span>')+'</div>';
     d.ex.forEach(function(ex){
       var t=topSet(ex.n), kg=t?(parseFloat(t.kg)||0):0;
       h+='<div class="planexrow"><div><div>'+ex.ico+' '+ex.n+'</div>';
@@ -896,8 +926,8 @@ function togGloss(i){gopenIdx[i]=!gopenIdx[i];renderGList();}
 function save(){
   try{
     localStorage.setItem('gh',JSON.stringify(hist));
-    localStorage.setItem('gf',JSON.stringify(fin));
     localStorage.setItem('glast',JSON.stringify(lastLog));
+    localStorage.setItem('gnext',String(nextDay));
     localStorage.setItem('wlogs',JSON.stringify(wLogs));
     localStorage.setItem('wunit',wUnit);
     localStorage.setItem('wgoal',wGoal===null?'':wGoal);
@@ -905,11 +935,11 @@ function save(){
 }
 function load(){
   try{
-    var h=localStorage.getItem('gh'),f=localStorage.getItem('gf'),gl=localStorage.getItem('glast');
+    var h=localStorage.getItem('gh'),gl=localStorage.getItem('glast'),gn=localStorage.getItem('gnext');
     var wl=localStorage.getItem('wlogs'),wu=localStorage.getItem('wunit'),wg=localStorage.getItem('wgoal');
     if(h) hist=JSON.parse(h);
     if(gl) lastLog=JSON.parse(gl)||{};
-    if(f){var fd=JSON.parse(f);Object.keys(fd).forEach(function(k){if(fd[k]){fin[k]=true;var p=document.getElementById('pill-'+k);if(p)p.classList.add('done');}});}
+    if(gn!==null&&gn!==''){var n=parseInt(gn,10);if(!isNaN(n)&&n>=0&&n<DAYS.length){nextDay=n;curDay=n;}}
     if(wl) wLogs=JSON.parse(wl);
     if(wu) { wUnit=wu; document.getElementById('wbtn-kg').classList.toggle('on',wu==='kg'); document.getElementById('wbtn-lbs').classList.toggle('on',wu==='lbs'); }
     if(wg && wg!=='') { wGoal=parseFloat(wg); document.getElementById('w-goal').value=fromKg(wGoal); }
@@ -1099,6 +1129,7 @@ function drawChart() {
 
 
 load();
+renderPills();
 renderSession();
 </script>
 </body>
