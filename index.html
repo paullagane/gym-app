@@ -240,6 +240,10 @@ table.st td{border-bottom:1px solid var(--border)}
       </div>
       <div class="seclbl">History</div>
       <div id="hist"></div>
+      <div style="height:22px"></div>
+      <div class="seclbl">Start over</div>
+      <button class="resetbtn" onclick="resetWorkoutData()">↺ Reset the app</button>
+      <div class="finhint">Clears history, remembered weights and the rotation. Keeps your body-weight log.</div>
     </div>
   </div>
 
@@ -287,6 +291,7 @@ table.st td{border-bottom:1px solid var(--border)}
       </div>
       <div class="seclbl">Log</div>
       <div id="w-log"></div>
+      <button class="resetbtn" onclick="clearWeightLog()">↺ Clear weight log</button>
     </div>
   </div>
 </div>
@@ -405,17 +410,21 @@ var hist = [];
 var lastLog = {}; // {exerciseName:{date:'Mon 1 Sep', sets:[{kg:'40',reps:'12'}]}}
 var gcat = 'All', gq = '', gopenIdx = {};
 
-function initDay(di) {
+// blank=true starts from empty fields; otherwise sets are pre-filled with last workout's numbers
+function initDay(di, blank) {
   sd[di] = {}; dn[di] = {}; oe[di] = {};
   pd[di] = false;
   pt[di] = {s:0, run:false, iv:null};
   DAYS[di].ex.forEach(function(ex, ei) {
     if (ex.plank) { sd[di][ei]=[]; dn[di][ei]=[]; oe[di][ei]=false; return; }
-    var n = parseInt(ex.t);
-    sd[di][ei] = [];
-    for (var i=0;i<n;i++) sd[di][ei].push({kg:'',reps:''});
-    dn[di][ei] = [];
-    for (var i=0;i<n;i++) dn[di][ei].push(false);
+    var prev = (!blank && lastLog[ex.n] && lastLog[ex.n].sets) || [];
+    var n = Math.max(parseInt(ex.t)||1, prev.length);
+    sd[di][ei] = []; dn[di][ei] = [];
+    for (var i=0;i<n;i++) {
+      var p = prev[i] || prev[prev.length-1] || null;
+      sd[di][ei].push({kg:(p&&p.kg)?String(p.kg):'', reps:(p&&p.reps)?String(p.reps):''});
+      dn[di][ei].push(false);
+    }
     oe[di][ei] = (ei===0);
   });
 }
@@ -539,9 +548,9 @@ function exCard(di,ei,ex) {
   });
   h += '</tbody></table>';
   if (prev.length) {
-    h += '<div class="prevrow">Last time: ' + prev.map(function(p,i){
+    h += '<div class="prevrow">↺ Pre-filled from '+lastLog[ex.n].date+': ' + prev.map(function(p){
       return (p.kg||'—')+'kg×'+(p.reps||'—');
-    }).join(' · ') + '</div>';
+    }).join(' · ') + ' — edit anything that changed.</div>';
   }
   h += '<button class="addset" onclick="addSet('+di+','+ei+')">+ Add set</button>';
   h += '</div></div>';
@@ -646,10 +655,27 @@ function finSess() {
 }
 
 function clearDay() {
-  if(!confirm('Clear the weights and reps logged for '+DAYS[curDay].name+'? Your rotation and history stay as they are.')) return;
-  initDay(curDay);
+  if(!confirm('Empty every weight and rep box for '+DAYS[curDay].name+'? Your rotation and history stay as they are.')) return;
+  initDay(curDay, true);
   justSaved=null; dayMsg=null;
   renderSession();
+}
+
+// ── RESET ─────────────────────────────────────────────
+function resetWorkoutData() {
+  if(!confirm('Reset the app?\n\nThis wipes your session history, the weights it remembers, and puts the rotation back to '+DAYS[0].name+'.\n\nYour body-weight log is kept.')) return;
+  hist=[]; lastLog={}; nextDay=0; curDay=0; justSaved=null; dayMsg=null;
+  for(var i=0;i<DAYS.length;i++) initDay(i, true);
+  try{ localStorage.removeItem('gf'); }catch(e){}
+  save(); renderPills(); renderSession(); renderProg();
+  alert('Workout data reset. You\'re back at '+DAYS[0].name+'.');
+}
+
+function clearWeightLog() {
+  if(!confirm('Delete every body-weight entry and your goal? Your workout history is kept.')) return;
+  wLogs=[]; wGoal=null;
+  document.getElementById('w-goal').value='';
+  save(); renderWeight();
 }
 
 // ── PLAN ──────────────────────────────────────────────
@@ -940,6 +966,8 @@ function load(){
     if(h) hist=JSON.parse(h);
     if(gl) lastLog=JSON.parse(gl)||{};
     if(gn!==null&&gn!==''){var n=parseInt(gn,10);if(!isNaN(n)&&n>=0&&n<DAYS.length){nextDay=n;curDay=n;}}
+    // rebuild the sheets now that last workout's weights are known, so they pre-fill
+    for(var k=0;k<DAYS.length;k++) initDay(k);
     if(wl) wLogs=JSON.parse(wl);
     if(wu) { wUnit=wu; document.getElementById('wbtn-kg').classList.toggle('on',wu==='kg'); document.getElementById('wbtn-lbs').classList.toggle('on',wu==='lbs'); }
     if(wg && wg!=='') { wGoal=parseFloat(wg); document.getElementById('w-goal').value=fromKg(wGoal); }
