@@ -60,7 +60,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .extarget{font-size:12px;color:var(--muted);margin-top:1px}
 .exlast{font-size:11px;color:var(--accent-text);background:var(--accent-bg);border:1px solid var(--accent);border-radius:100px;padding:2px 8px;margin-top:5px;display:inline-block;font-weight:500}
 .exlast.none{color:var(--faint);background:none;border-color:var(--border);font-weight:400}
-.prevrow{padding:8px 10px;font-size:11px;color:var(--muted);background:var(--surface-alt);border-top:1px solid var(--border);overflow-x:auto;white-space:nowrap}
+td.sfixed{padding:11px 12px;cursor:pointer;border-right:1px solid var(--border);-webkit-tap-highlight-color:transparent}
+td.sfixed.isdone .sval{color:var(--muted)}
+.sval{font-size:15px;font-weight:600}
+.sx{color:var(--faint);margin:0 7px;font-size:12px}
+.sedit{float:right;font-size:11px;color:var(--accent);border:1px solid var(--border);border-radius:100px;padding:1px 8px;font-weight:500}
+td.scells{display:flex;border-right:1px solid var(--border)}
+td.scells .sinput:last-child{border-right:none}
 .exprog{font-size:12px;color:var(--faint);flex-shrink:0}
 .exchev{font-size:13px;color:var(--faint);transition:transform .2s;flex-shrink:0}
 .exchev.open{transform:rotate(180deg)}
@@ -102,7 +108,7 @@ table.st td{border-bottom:1px solid var(--border)}
 .proghead{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
 .progtrack{height:5px;background:var(--surface-alt);border-radius:100px;overflow:hidden;margin-bottom:12px}
 .progfill{height:100%;background:var(--accent);border-radius:100px;transition:width .3s}
-.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stattile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
 .statval{font-size:22px;font-weight:600}
 .statlbl{font-size:11px;color:var(--muted);margin-top:2px}
@@ -121,7 +127,7 @@ table.st td{border-bottom:1px solid var(--border)}
 .kneenote{margin:0 14px 14px;padding:10px 12px;border-radius:var(--r);background:var(--warn-bg);border:1px solid rgba(181,97,10,.25);font-size:13px;color:var(--warn-text);line-height:1.5}
 .progpage{padding:14px}
 .seclbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:600;margin-bottom:8px}
-.prgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.prgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:18px}
 .prtile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
 .prval{font-size:26px;font-weight:600;color:var(--accent)}
 .prlbl{font-size:11px;color:var(--muted);margin-top:2px}
@@ -131,6 +137,7 @@ table.st td{border-bottom:1px solid var(--border)}
 .hname{font-size:14px;font-weight:500}
 .hmeta{font-size:12px;color:var(--muted);margin-top:2px}
 .htag{font-size:11px;padding:3px 10px;border-radius:100px;background:var(--accent-bg);color:var(--accent-text);font-weight:500}
+.hdel{background:none;border:none;cursor:pointer;color:var(--faint);font-size:16px;padding:4px 2px;line-height:1;-webkit-tap-highlight-color:transparent}
 .empty{text-align:center;padding:2.5rem 1rem;color:var(--faint);font-size:14px}
 .gpage{padding:14px}
 .gsearch-wrap{position:relative;margin-bottom:12px}
@@ -236,7 +243,6 @@ table.st td{border-bottom:1px solid var(--border)}
       <div class="prgrid">
         <div class="prtile"><div class="prval" id="ps">0</div><div class="prlbl">Sessions</div></div>
         <div class="prtile"><div class="prval" id="psets">0</div><div class="prlbl">Total sets</div></div>
-        <div class="prtile"><div class="prval" id="pvol">0</div><div class="prlbl">Volume kg</div></div>
       </div>
       <div class="seclbl">History</div>
       <div id="hist"></div>
@@ -405,14 +411,14 @@ var curDay = 0;
 var nextDay = 0;        // the only day you're allowed to train — rotates on completion
 var justSaved = null;   // banner shown right after a workout is saved
 var dayMsg = null;      // "that day is locked" notice
-var sd = {}, dn = {}, oe = {}, pd = {}, pt = {};
+var sd = {}, dn = {}, oe = {}, pd = {}, pt = {}, edSet = {};
 var hist = [];
 var lastLog = {}; // {exerciseName:{date:'Mon 1 Sep', sets:[{kg:'40',reps:'12'}]}}
 var gcat = 'All', gq = '', gopenIdx = {};
 
 // blank=true starts from empty fields; otherwise sets are pre-filled with last workout's numbers
 function initDay(di, blank) {
-  sd[di] = {}; dn[di] = {}; oe[di] = {};
+  sd[di] = {}; dn[di] = {}; oe[di] = {}; edSet = {};
   pd[di] = false;
   pt[di] = {s:0, run:false, iv:null};
   DAYS[di].ex.forEach(function(ex, ei) {
@@ -468,18 +474,18 @@ function selDay(di) {
 // ── SESSION ───────────────────────────────────────────
 function renderSession() {
   var di = curDay, d = DAYS[di];
-  var total=0, done=0, vol=0;
+  var total=0, done=0;
   d.ex.forEach(function(ex,ei) {
     if (ex.plank) { total++; if(pd[di]) done++; return; }
     sd[di][ei].forEach(function(s,si) {
       total++;
-      if (dn[di][ei][si]) { done++; vol+=(parseFloat(s.kg)||0)*(parseInt(s.reps)||0); }
+      if (dn[di][ei][si]) done++;
     });
   });
   var pct = total ? Math.round(done/total*100) : 0;
   var html = '';
   if (justSaved) {
-    html += '<div class="savedbanner">'+justSaved.name+' saved ✓ · '+justSaved.sets+' sets · '+justSaved.vol+' kg';
+    html += '<div class="savedbanner">'+justSaved.name+' saved ✓ · '+justSaved.sets+' sets';
     html += '<div class="sbsub">Next up: '+justSaved.next+' — it\'s loaded and ready below.</div></div>';
   }
   if (dayMsg) html += '<div class="lockmsg">🔒 '+dayMsg+'</div>';
@@ -490,7 +496,6 @@ function renderSession() {
   html += '<div class="progsec"><div class="proghead"><span>'+done+' of '+total+' sets done</span><span>'+pct+'%</span></div>';
   html += '<div class="progtrack"><div class="progfill" style="width:'+pct+'%"></div></div>';
   html += '<div class="statgrid">';
-  html += '<div class="stattile"><div class="statval">'+Math.round(vol)+'</div><div class="statlbl">Volume kg</div></div>';
   html += '<div class="stattile"><div class="statval">'+done+'</div><div class="statlbl">Sets done</div></div>';
   html += '<div class="stattile"><div class="statval">'+d.ex.length+'</div><div class="statlbl">Exercises</div></div>';
   html += '</div>';
@@ -536,22 +541,25 @@ function exCard(di,ei,ex) {
   h += '<div class="exchev'+(isOpen?' open':'')+'">▾</div></div>';
   if (ex.note) h += '<div class="exnote'+(isOpen?' open':'')+'">⚠️ '+ex.note+'</div>';
   h += '<div class="exbody'+(isOpen?' open':'')+'">';
-  h += '<table class="st"><thead><tr><th>#</th><th>Weight kg</th><th>Reps</th><th>✓</th></tr></thead><tbody>';
+  h += '<table class="st"><thead><tr><th>#</th><th>Weight × reps</th><th>✓</th></tr></thead><tbody>';
   sets.forEach(function(s,si) {
     var p=prev[si]||prev[prev.length-1]||null;
     var phKg=(p&&p.kg)?String(p.kg):'—';
     var phReps=(p&&p.reps)?String(p.reps):'—';
+    var key=di+'-'+ei+'-'+si, filled=(s.kg!==''||s.reps!=='');
     h += '<tr><td class="snum">'+(si+1)+'</td>';
-    h += '<td><input class="sinput" type="number" min="0" step="2.5" placeholder="'+phKg+'" value="'+s.kg+'" onchange="sv('+di+','+ei+','+si+',\'kg\',this.value)"></td>';
-    h += '<td><input class="sinput" type="number" min="0" step="1" placeholder="'+phReps+'" value="'+s.reps+'" onchange="sv('+di+','+ei+','+si+',\'reps\',this.value)"></td>';
+    if (filled && !edSet[key]) {
+      // set already has last workout's numbers — just tap the tick
+      h += '<td class="sfixed'+(done[si]?' isdone':'')+'" onclick="editSet('+di+','+ei+','+si+')">';
+      h += '<span class="sval">'+(s.kg!==''?s.kg+' kg':'—')+'</span><span class="sx">×</span><span class="sval">'+(s.reps!==''?s.reps:'—')+'</span>';
+      h += '<span class="sedit">edit</span></td>';
+    } else {
+      h += '<td class="scells"><input class="sinput" type="number" min="0" step="2.5" placeholder="'+phKg+' kg" value="'+s.kg+'" onchange="sv('+di+','+ei+','+si+',\'kg\',this.value)">';
+      h += '<input class="sinput" type="number" min="0" step="1" placeholder="'+phReps+' reps" value="'+s.reps+'" onchange="sv('+di+','+ei+','+si+',\'reps\',this.value)"></td>';
+    }
     h += '<td class="schk-cell"><button class="chk'+(done[si]?' on':'')+'" onclick="togDone('+di+','+ei+','+si+')">✓</button></td></tr>';
   });
   h += '</tbody></table>';
-  if (prev.length) {
-    h += '<div class="prevrow">↺ Pre-filled from '+lastLog[ex.n].date+': ' + prev.map(function(p){
-      return (p.kg||'—')+'kg×'+(p.reps||'—');
-    }).join(' · ') + ' — edit anything that changed.</div>';
-  }
   h += '<button class="addset" onclick="addSet('+di+','+ei+')">+ Add set</button>';
   h += '</div></div>';
   return h;
@@ -588,7 +596,12 @@ function plankCard(di,ei,ex) {
 
 function togEx(di,ei) { oe[di][ei]=!oe[di][ei]; renderSession(); }
 function sv(di,ei,si,f,v) { sd[di][ei][si][f]=v; }
-function togDone(di,ei,si) { justSaved=null; dayMsg=null; dn[di][ei][si]=!dn[di][ei][si]; oe[di][ei]=true; renderSession(); }
+function editSet(di,ei,si) { edSet[di+'-'+ei+'-'+si]=true; renderSession(); }
+function togDone(di,ei,si) {
+  justSaved=null; dayMsg=null;
+  delete edSet[di+'-'+ei+'-'+si];
+  dn[di][ei][si]=!dn[di][ei][si]; oe[di][ei]=true; renderSession();
+}
 function addSet(di,ei) { justSaved=null; sd[di][ei].push({kg:'',reps:''}); dn[di][ei].push(false); oe[di][ei]=true; renderSession(); }
 
 function togPlank(di) {
@@ -620,14 +633,13 @@ function togPDone(di) {
 }
 
 function finSess() {
-  var di=curDay, d=DAYS[di], vol=0, sets=0, total=0, logged={};
+  var di=curDay, d=DAYS[di], sets=0, total=0, logged={};
   d.ex.forEach(function(ex,ei){
     if(ex.plank){ total++; return; }
     sd[di][ei].forEach(function(s,si){
       total++;
       if(dn[di][ei][si]){
         sets++;
-        vol+=(parseFloat(s.kg)||0)*(parseInt(s.reps)||0);
         if(!logged[ex.n]) logged[ex.n]=[];
         logged[ex.n].push({kg:s.kg,reps:s.reps});
       }
@@ -643,13 +655,13 @@ function finSess() {
   Object.keys(logged).forEach(function(name){
     lastLog[name] = {date:dateStr, sets:logged[name]};
   });
-  hist.unshift({name:d.name,focus:d.focus,sets:sets,vol:Math.round(vol),date:dateStr});
+  hist.unshift({name:d.name,focus:d.focus,sets:sets,date:dateStr});
 
   // Reset the sheet and rotate to the next day in the split
   initDay(di);
   nextDay = (di+1)%DAYS.length;
   curDay = nextDay;
-  justSaved = {name:d.name, next:DAYS[nextDay].name, sets:sets, vol:Math.round(vol)};
+  justSaved = {name:d.name, next:DAYS[nextDay].name, sets:sets};
   dayMsg = null;
   renderPills(); renderSession(); save();
 }
@@ -698,18 +710,27 @@ function renderPlan() {
 
 // ── PROGRESS ──────────────────────────────────────────
 function renderProg() {
-  var ts=0,tv=0;
-  hist.forEach(function(h){ts+=h.sets;tv+=h.vol;});
+  var ts=0;
+  hist.forEach(function(h){ts+=h.sets;});
   document.getElementById('ps').textContent=hist.length;
   document.getElementById('psets').textContent=ts;
-  document.getElementById('pvol').textContent=tv;
   var el=document.getElementById('hist');
   if(!hist.length){el.innerHTML='<div class="empty">Complete a session to see it here.</div>';return;}
   var h='<div class="hlist">';
-  hist.forEach(function(e){
-    h+='<div class="hitem"><div><div class="hname">'+e.name+'</div><div class="hmeta">'+e.date+' · '+e.sets+' sets · '+e.vol+' kg</div></div><span class="htag">Done ✓</span></div>';
+  hist.forEach(function(e,i){
+    h+='<div class="hitem"><div><div class="hname">'+e.name+'</div><div class="hmeta">'+e.date+' · '+e.sets+' sets</div></div>';
+    h+='<div style="display:flex;align-items:center;gap:8px"><span class="htag">Done ✓</span>';
+    h+='<button class="hdel" onclick="delHist('+i+')" title="Delete this session">✕</button></div></div>';
   });
   el.innerHTML=h+'</div>';
+}
+
+function delHist(i) {
+  var e=hist[i];
+  if(!e) return;
+  if(!confirm('Delete '+e.name+' from '+e.date+'?\n\nOnly this history entry goes — your remembered weights and the day rotation stay as they are.')) return;
+  hist.splice(i,1);
+  save(); renderProg();
 }
 
 // ── EXERCISE FIGURES (inline SVG — no external images) ─
