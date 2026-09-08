@@ -123,6 +123,9 @@ table.st td{border-bottom:1px solid var(--border)}
 .plancardmeta{font-size:12px;color:var(--muted);margin-top:2px}
 .planexrow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .planexlast{font-size:11px;color:var(--faint);margin-top:2px}
+.planmatrow{padding:7px 14px;background:var(--surface-alt);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.matdiv{display:flex;align-items:center;gap:8px;margin:8px 2px 0;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.matdiv::before,.matdiv::after{content:'';height:1px;background:var(--border-strong);flex:1}
 .planexrow:last-child{border-bottom:none}
 .kneenote{margin:0 14px 14px;padding:10px 12px;border-radius:var(--r);background:var(--warn-bg);border:1px solid rgba(181,97,10,.25);font-size:13px;color:var(--warn-text);line-height:1.5}
 .progpage{padding:14px}
@@ -220,7 +223,7 @@ table.st td{border-bottom:1px solid var(--border)}
 <div class="topbar">
   <div class="topbar-inner">
     <div>
-      <div class="sub">3-day split · 45 min</div>
+      <div class="sub">3-day full body · ~48 min</div>
       <h1>Gym tracker</h1>
     </div>
     <span class="badge">Knee-safe ✓</span>
@@ -312,30 +315,34 @@ table.st td{border-bottom:1px solid var(--border)}
 
 <script>
 // ── DATA ──────────────────────────────────────────────
+// Three full-body days — every session covers legs, chest, back, shoulders, arms and core.
 var DAYS = [
-  { name:'Upper A', focus:'Chest · Back · Shoulders', dur:'~43 min', ex:[
-    {n:'Seated cable row',        t:'4×10–12', m:'Back',        note:null,   ico:'💪'},
+  { name:'Full body A', focus:'Hamstrings · Chest · Back · Shoulders · Biceps · Core', dur:'~48 min', ex:[
+    {n:'Romanian deadlift',       t:'3×10',    m:'Hamstrings · Glutes', note:'Soft knee bend only — hinge at hip', ico:'🦵'},
     {n:'Incline dumbbell press',  t:'3×10–12', m:'Chest',       note:null,   ico:'🏋️'},
-    {n:'Lat pulldown',            t:'3×10–12', m:'Back',        note:null,   ico:'💪'},
+    {n:'Seated cable row',        t:'3×10–12', m:'Back',        note:null,   ico:'💪'},
     {n:'Dumbbell shoulder press', t:'3×10–12', m:'Shoulders',   note:null,   ico:'🏋️'},
-    {n:'Face pulls',              t:'3×15',    m:'Rear delt',   note:null,   ico:'🔁'},
-    {n:'Plank',                   t:'1×60s',   m:'Core · Full body', note:'Floor-based — zero knee load', ico:'🧘', plank:true}
+    {n:'Seated cable bicep curl', t:'3×12',    m:'Biceps',      note:null,   ico:'💪'},
+    {n:'Glute bridge',            t:'3×12',    m:'Glutes · Hamstrings', note:'Floor-based, feet flat — no knee stress', ico:'🦵', mat:true},
+    {n:'Plank',                   t:'1×60s',   m:'Core · Full body', note:'Floor-based — zero knee load', ico:'🧘', plank:true, mat:true}
   ]},
-  { name:'Lower', focus:'Glutes · Hamstrings · Core', dur:'~41 min', ex:[
-    {n:'Hip thrust (barbell)',    t:'4×10–12', m:'Glutes',      note:'Keep feet flat — no knee stress', ico:'🦵'},
-    {n:'Romanian deadlift',       t:'3×10',    m:'Hamstrings',  note:'Soft knee bend only — hinge at hip', ico:'🦵'},
+  { name:'Full body B', focus:'Glutes · Chest · Back · Shoulders · Triceps · Core', dur:'~48 min', ex:[
+    {n:'Cable pull-through',      t:'3×12',    m:'Glutes · Hamstrings', note:'Standing hinge — almost no knee bend', ico:'🦵'},
+    {n:'Dumbbell bench press',    t:'3×10–12', m:'Chest',       note:null,   ico:'🏋️'},
+    {n:'Lat pulldown',            t:'3×10–12', m:'Back · Lats', note:null,   ico:'💪'},
+    {n:'Dumbbell lateral raise',  t:'3×15',    m:'Shoulders',   note:null,   ico:'🔁'},
+    {n:'Overhead tricep extension',t:'3×12',   m:'Triceps',     note:null,   ico:'💪'},
+    {n:'Glute bridge',            t:'3×12',    m:'Glutes · Hamstrings', note:'Floor-based, feet flat — no knee stress', ico:'🦵', mat:true},
+    {n:'Dead bug (core)',         t:'3×10/side',m:'Core',       note:'Floor-based — zero knee load', ico:'🧘', mat:true}
+  ]},
+  { name:'Full body C', focus:'Hamstrings · Chest · Back · Shoulders · Triceps · Core', dur:'~48 min', ex:[
     {n:'Seated leg curl',         t:'3×12',    m:'Hamstrings',  note:'Seated version — easier on knees', ico:'🦵'},
-    {n:'Standing calf raise',     t:'3×15',    m:'Calves',      note:null,   ico:'🦵'},
-    {n:'Dead bug (core)',          t:'3×10/side',m:'Core',      note:'Floor-based — zero knee load', ico:'🧘'},
-    {n:'Plank',                   t:'1×60s',   m:'Core · Full body', note:'Floor-based — zero knee load', ico:'🧘', plank:true}
-  ]},
-  { name:'Upper B', focus:'Arms · Back · Chest', dur:'~44 min', ex:[
-    {n:'Assisted pull-up / pulldown', t:'4×8–10',  m:'Back',    note:null,   ico:'💪'},
-    {n:'Dumbbell bench press',        t:'3×10–12', m:'Chest',   note:null,   ico:'🏋️'},
-    {n:'Seated cable bicep curl',     t:'3×12',    m:'Biceps',  note:null,   ico:'💪'},
-    {n:'Overhead tricep extension',   t:'3×12',    m:'Triceps', note:null,   ico:'💪'},
-    {n:'Dumbbell lateral raise',      t:'3×15',    m:'Shoulders',note:null,  ico:'🔁'},
-    {n:'Plank',                       t:'1×60s',   m:'Core · Full body', note:'Floor-based — zero knee load', ico:'🧘', plank:true}
+    {n:'Dumbbell bench press',    t:'3×12',    m:'Chest',       note:null,   ico:'🏋️'},
+    {n:'Assisted pull-up / pulldown', t:'3×8–10', m:'Back · Lats', note:null, ico:'💪'},
+    {n:'Face pulls',              t:'3×15',    m:'Rear delts · Shoulders', note:null, ico:'🔁'},
+    {n:'Overhead tricep extension',t:'3×12',   m:'Triceps',     note:null,   ico:'💪'},
+    {n:'Glute bridge',            t:'3×12',    m:'Glutes · Hamstrings', note:'Floor-based, feet flat — no knee stress', ico:'🦵', mat:true},
+    {n:'Plank',                   t:'1×60s',   m:'Core · Full body', note:'Floor-based — zero knee load', ico:'🧘', plank:true, mat:true}
   ]}
 ];
 
@@ -364,10 +371,10 @@ var GLOSSARY = [
    steps:['Set cable to face height with rope attachment. Step back to create tension.','Pull rope towards your face, splitting it apart — hands end up either side of head, elbows wide.','Pause one second, then return under control.'],
    tips:['Keep elbows high — at least level with shoulders.','Use lighter weight and focus on form.','Great for counteracting too much pressing.'],
    knee:null},
-  {n:'Hip thrust (barbell)', ico:'🦵', m:'Glutes · Hamstrings', cat:'Lower body', vid:null,
-   steps:['Sit on floor with upper back against bench. Roll barbell over hips (use a pad).','Feet flat, hip-width apart. Drive through heels to push hips up until thighs are parallel to floor.','Squeeze glutes hard at the top for one second, then lower under control.'],
-   tips:['Chin tucked slightly — don\'t hyperextend neck.','Knees track in line with toes.','Movement comes from hips, not lower back.'],
-   knee:'Feet stay flat throughout — no deep knee flexion. Ideal for knee arthritis.'},
+  {n:'Cable pull-through', ico:'🦵', m:'Glutes · Hamstrings', cat:'Lower body', vid:null,
+   steps:['Set a cable to its lowest setting with a rope attachment. Face away from the machine, rope passing between your legs, and step forward until the cable is under tension.','Push your hips back and let the rope travel back between your legs. Keep a soft knee bend and a flat back until you feel a stretch in the hamstrings.','Drive your hips forward to stand tall and squeeze the glutes hard at the top. Stop when you\'re upright — don\'t lean back.'],
+   tips:['It\'s a hip hinge, not a squat — your knees barely move.','Your arms are just hooks holding the rope; all the work comes from the hips.','Stand further from the machine for more tension at the stretch.'],
+   knee:'Standing hip hinge with almost no knee bend — the gentlest glute exercise on an arthritic knee.'},
   {n:'Romanian deadlift', ico:'🦵', m:'Hamstrings · Glutes · Lower back', cat:'Lower body', vid:null,
    steps:['Stand feet hip-width, holding bar or dumbbells in front of thighs.','Push hips back and hinge forward, weight slides down legs until strong hamstring stretch.','Drive hips forward to stand, squeeze glutes at the top.'],
    tips:['Keep weight close to body throughout.','Maintain neutral spine — don\'t round lower back.','Knees stay relatively straight with only a soft bend.'],
@@ -376,10 +383,10 @@ var GLOSSARY = [
    steps:['Sit with back of lower legs on the padded lever, pad just above heels.','Curl the lever down by bending knees, pulling heels towards glutes.','Pause at full contraction, slowly return — don\'t let weight slam.'],
    tips:['Seated is preferable to lying for knee arthritis.','Control the return — it builds just as much strength.','Don\'t let hips lift off the seat.'],
    knee:'Seated version only — use a comfortable range of motion.'},
-  {n:'Standing calf raise', ico:'🦵', m:'Calves', cat:'Lower body', vid:null,
-   steps:['Stand with balls of feet on a step, heels hanging off. Hold a dumbbell or use bodyweight.','Let heels drop below step for a full calf stretch.','Drive up onto toes as high as possible, then lower slowly back down.'],
-   tips:['Full range of motion — both stretch and contraction matter.','Slow the lowering phase to 3 seconds.','Can be done single-leg to increase difficulty.'],
-   knee:null},
+  {n:'Glute bridge', ico:'🦵', m:'Glutes · Hamstrings · Core', cat:'Lower body', vid:null,
+   steps:['Lie on your back on the floor. Knees bent, feet flat and hip-width apart, heels about a hand-span from your glutes.','Push through your heels and lift your hips until your body makes a straight line from knees to shoulders.','Squeeze the glutes hard at the top for a second, then lower under control — stop just short of resting the hips down.'],
+   tips:['Drive through the heels, not the toes — you should feel this in the glutes, not the front of the thighs.','Keep your ribs down and core braced so the lift comes from the hips rather than arching your lower back.','Once bodyweight feels easy, rest a dumbbell across your hips or do one leg at a time.'],
+   knee:'Floor-based with feet flat and the knee angle barely changing — nothing rolls over or loads the joint.'},
   {n:'Dead bug (core)', ico:'🧘', m:'Core · Deep stabilisers', cat:'Core', vid:null,
    steps:['Lie on back, arms pointing up, knees bent at 90° in the air.','Press lower back firmly into the floor — maintain this throughout.','Lower right arm behind head while extending left leg. Return, then swap sides.'],
    tips:['Never let lower back lift off floor — that\'s the key cue.','Move slowly and with control.','Breathe out as you extend, breathe in as you return.'],
@@ -471,6 +478,12 @@ function selDay(di) {
   renderPills(); renderSession();
 }
 
+// Machine / free-weight work first, floor work last — one trip to the mat room
+function exOrder(d) {
+  var idx = d.ex.map(function(e,i){return i;});
+  return idx.sort(function(a,b){ return (d.ex[a].mat?1:0)-(d.ex[b].mat?1:0); });
+}
+
 // ── SESSION ───────────────────────────────────────────
 function renderSession() {
   var di = curDay, d = DAYS[di];
@@ -491,7 +504,15 @@ function renderSession() {
   if (dayMsg) html += '<div class="lockmsg">🔒 '+dayMsg+'</div>';
   html += '<div class="chip-row"><span class="chip">⏱ '+d.dur+'</span><span class="chip">'+d.focus+'</span></div>';
   html += '<div class="exlist">';
-  d.ex.forEach(function(ex,ei) { html += ex.plank ? plankCard(di,ei,ex) : exCard(di,ei,ex); });
+  var matOpen = false;
+  exOrder(d).forEach(function(ei) {
+    var ex = d.ex[ei];
+    if (ex.mat && !matOpen) {
+      matOpen = true;
+      html += '<div class="matdiv"><span>🧘 Mat room — do these together</span></div>';
+    }
+    html += ex.plank ? plankCard(di,ei,ex) : exCard(di,ei,ex);
+  });
   html += '</div>';
   html += '<div class="progsec"><div class="proghead"><span>'+done+' of '+total+' sets done</span><span>'+pct+'%</span></div>';
   html += '<div class="progtrack"><div class="progfill" style="width:'+pct+'%"></div></div>';
@@ -696,7 +717,10 @@ function renderPlan() {
   DAYS.forEach(function(d,di){
     h+='<div class="plancard"><div class="plancardhead"><div><div class="plancardname">'+d.name+'</div><div class="plancardmeta">'+d.focus+' · '+d.dur+'</div></div>';
     h+=(di===nextDay?'<span class="nextbadge">NEXT UP</span>':'<span style="font-size:12px;color:var(--faint)">🔒</span>')+'</div>';
-    d.ex.forEach(function(ex){
+    var matOpen=false;
+    exOrder(d).forEach(function(ei){
+      var ex=d.ex[ei];
+      if(ex.mat&&!matOpen){matOpen=true;h+='<div class="planmatrow">🧘 Mat room — grouped together</div>';}
       var t=topSet(ex.n), kg=t?(parseFloat(t.kg)||0):0;
       h+='<div class="planexrow"><div><div>'+ex.ico+' '+ex.n+'</div>';
       h+='<div class="planexlast">'+(kg?'Last: '+kg+' kg'+((parseInt(t.reps)||0)?' × '+parseInt(t.reps):'')+' · '+lastLog[ex.n].date:'No log yet')+'</div></div>';
@@ -704,7 +728,7 @@ function renderPlan() {
     });
     h+='</div>';
   });
-  h+='<div class="kneenote"><strong>Knee arthritis adaptations:</strong> No deep squats, lunges, or leg press. All leg work uses pain-free range of motion.</div>';
+  h+='<div class="kneenote"><strong>How this split works:</strong> Three full-body days — every session hits legs, chest, back, shoulders, arms and core. Biceps also get worked by every row and pulldown, triceps by every press, so the arm slot alternates.<br><br><strong>One trip to the mat room:</strong> Every floor exercise is grouped at the end of the session, so you finish the machine and dumbbell work first and only walk over once.<br><br><strong>Knee arthritis adaptations:</strong> No deep squats, lunges, or leg press. Leg work is hinging, seated or floor-based, in a pain-free range of motion.</div>';
   document.getElementById('plan-content').innerHTML=h;
 }
 
@@ -817,15 +841,13 @@ var FIGS = {
    p:{head:[62,30],sh:[62,42],hip:[62,70],kn:[62,85],an:[62,100],ft:[72,100],el:[47,36],hd:[80,26]},
    eq:function(p){return eFloor()+ePost(134)+eStack(134,50)+eCable(p.hd,[130,40]);}}
 ],
-'Hip thrust (barbell)':[
-  {cap:'Start — hips low',
-   p:{head:[36,56],sh:[48,62],hip:[78,86],kn:[102,74],an:[102,100],ft:[112,100]},
-   eq:function(){return eFloor()+eBench(22,58,64);},
-   eq2:function(p){return ePlate([78,84]);}},
-  {cap:'Finish — thighs parallel, glutes squeezed',
-   p:{head:[36,56],sh:[48,62],hip:[80,66],kn:[104,66],an:[104,100],ft:[114,100]},
-   eq:function(){return eFloor()+eBench(22,58,64);},
-   eq2:function(p){return ePlate([80,64]);}}
+'Cable pull-through':[
+  {cap:'Start — hips back, rope between the legs',
+   p:{head:[27,54],sh:[38,58],hip:[66,68],kn:[68,84],an:[64,100],ft:[52,100],el:[42,72],hd:[52,86]},
+   eq:function(p){return eFloor()+ePost(134,58)+eStack(134,64)+eCable(p.hd,[130,90]);}},
+  {cap:'Finish — stand tall, squeeze the glutes',
+   p:{head:[60,30],sh:[60,42],hip:[60,70],kn:[60,85],an:[60,100],ft:[48,100],el:[64,56],hd:[68,70]},
+   eq:function(p){return eFloor()+ePost(134,58)+eStack(134,64)+eCable(p.hd,[130,90]);}}
 ],
 'Romanian deadlift':[
   {cap:'Start — standing tall',
@@ -847,15 +869,13 @@ var FIGS = {
    eq:function(){return eFloor()+eSeat(38,70,72)+eRest(36,72,42)+fR(66,60,18,5,'fg-eq',2);},
    eq2:function(){return ePad([88,88]);}}
 ],
-'Standing calf raise':[
-  {cap:'Start — heels dropped below the step',
-   p:{head:[76,32],sh:[76,42],hip:[76,70],kn:[76,82],an:[78,88],el:[80,56],hd:[82,70]},
-   eq:function(){return eFloor()+fR(72,88,52,12,'fg-eqf',2);},
-   eq2:function(p){return fL([78,88],[94,88],'fg-b')+fL([78,88],[66,98],'fg-b')+eDb(p.hd);}},
-  {cap:'Finish — up on the toes',
-   p:{head:[76,22],sh:[76,32],hip:[76,60],kn:[76,72],an:[78,78],el:[80,46],hd:[82,60]},
-   eq:function(){return eFloor()+fR(72,88,52,12,'fg-eqf',2);},
-   eq2:function(p){return fL([78,78],[94,88],'fg-b')+fL([78,78],[68,84],'fg-b')+eDb(p.hd);}}
+'Glute bridge':[
+  {cap:'Start — hips resting on the floor',
+   p:{head:[104,89],sh:[93,95],hip:[58,96],kn:[35,79],an:[28,98],ft:[15,100]},
+   eq:function(){return eFloor();}},
+  {cap:'Finish — hips up, straight line knees to shoulders',
+   p:{head:[104,89],sh:[93,95],hip:[57,77],kn:[33,68],an:[28,98],ft:[15,100]},
+   eq:function(){return eFloor();}}
 ],
 'Dead bug (core)':[
   {cap:'Start — knees at 90°, arms up',
