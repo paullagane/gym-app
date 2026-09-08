@@ -74,6 +74,8 @@ td.scells .sinput:last-child{border-right:none}
 .exnote.open{display:block;margin-bottom:4px}
 .exbody{display:none;border-top:1px solid var(--border)}
 .exbody.open{display:block}
+.matdiv{display:flex;align-items:center;gap:8px;margin:8px 2px 0;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.matdiv::before,.matdiv::after{content:'';height:1px;background:var(--border-strong);flex:1}
 table.st{width:100%;border-collapse:collapse}
 table.st th{padding:7px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);background:var(--surface-alt);text-align:left;font-weight:500;border-bottom:1px solid var(--border)}
 table.st th:first-child{width:34px;text-align:center}
@@ -124,8 +126,6 @@ table.st td{border-bottom:1px solid var(--border)}
 .planexrow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .planexlast{font-size:11px;color:var(--faint);margin-top:2px}
 .planmatrow{padding:7px 14px;background:var(--surface-alt);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
-.matdiv{display:flex;align-items:center;gap:8px;margin:8px 2px 0;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
-.matdiv::before,.matdiv::after{content:'';height:1px;background:var(--border-strong);flex:1}
 .planexrow:last-child{border-bottom:none}
 .kneenote{margin:0 14px 14px;padding:10px 12px;border-radius:var(--r);background:var(--warn-bg);border:1px solid rgba(181,97,10,.25);font-size:13px;color:var(--warn-text);line-height:1.5}
 .progpage{padding:14px}
